@@ -73,7 +73,7 @@ public interface Frame {
 
             if(isPadded()) {
                 byte padLength = payload[0];
-                offset = 1;
+                offset += 1;
                 length = length - 1 - (int)padLength & 0xff;
             }
 
@@ -144,8 +144,17 @@ public interface Frame {
 
             if(isPadded()) {
                 byte padLength = payload[0];
-                offset = 1;
+                offset += 1;
                 length = length - 1 - (int)padLength & 0xff;
+            }
+            if(isPriority()) {
+                ByteBuffer buf = ByteBuffer.wrap(payload, offset, length);
+                int exclusiveDependOnStreamId = buf.getInt();
+                byte weight = buf.get();
+
+                // set priority 
+                offset += 5;
+                length -= 5;
             }
             ByteArrayInputStream bais = new ByteArrayInputStream(payload, offset, length);
             decoder.decode(bais, headerListener);
@@ -210,6 +219,14 @@ public interface Frame {
 
         @Override
         public void process(AbstractStream stream) {
+            if(isAck()) {
+                // do nothing yet...
+            } else {
+                byte[] payload = payload();
+
+                // send pong with 8 byte payload received from server
+                stream.ping(payload, true);
+            }
             Listener listener = stream.listener();
             if(listener != null) {
                 listener.onSettings(stream, this);
@@ -299,9 +316,7 @@ public interface Frame {
         public String toString() {
             ByteBuffer buf = ByteBuffer.wrap(payload());
             int window = buf.getInt();
-            return "StreamId : " + streamId() + ", Type : " + type.name()
-            + ", Flags : " + flags + ", length : " + length()
-            + ", window : " + window;
+            return super.toString() + ", window : " + window;
         }
     }
 
