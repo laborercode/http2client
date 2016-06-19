@@ -1,7 +1,9 @@
 package org.laborercode.http2.client;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -48,7 +50,7 @@ public class Http2Client {
         this.address = new InetSocketAddress(host, port);
         socket = new Socket(address.getHostName(), address.getPort());
 
-        upgrade();
+        upgrade(true);
         out = socket.getOutputStream();
         in = socket.getInputStream();
 
@@ -58,6 +60,30 @@ public class Http2Client {
         reader = new FrameReader(this);
         reader.start();
 
+    }
+
+    public Http2Request connect(String host, int port, UpgradeRequest request) throws IOException {
+        this.address = new InetSocketAddress(host, port);
+        socket = new Socket(address.getHostName(), address.getPort());
+
+        String requestString = request.getRequestString(host, port, settings);
+        OutputStream out = socket.getOutputStream();
+        out.write(requestString.getBytes());
+
+        upgrade(false);
+        this.out = out;
+        in = socket.getInputStream();
+
+        writer = new FrameWriter(this);
+        writer.start();
+
+        reader = new FrameReader(this);
+
+        // add request for upgrade request before run reader
+        Http2Request firstRequest = request();
+        reader.start();
+
+        return firstRequest;
     }
 
     public void disconnect() {
@@ -113,9 +139,9 @@ public class Http2Client {
         return writer;
     }
 
-    private void upgrade() throws IOException {
-        if (direct) {
-            OutputStream out = socket.getOutputStream();
+    private void upgrade(boolean direct) throws IOException {
+        OutputStream out = socket.getOutputStream();
+        if(direct) {
             out.write(preface);
 
             Http2FrameOutputStream frameOutputStream = new Http2FrameOutputStream(out);
@@ -123,9 +149,20 @@ public class Http2Client {
                     settings.payload());
             frameOutputStream.close();
         } else {
-
+            BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            String line = socketReader.readLine();
+            if(!line.contains("101 Switching Protocols")) {
+                throw new IOException();
+            } else {
+                out.write(preface);
+            }
+            while(true) {
+                line = socketReader.readLine();
+                if(line.isEmpty()) break;
+            }
         }
 
+        // default server settings... it will be updated right after upgrade...
         serverSettings = new Settings();
     }
 
