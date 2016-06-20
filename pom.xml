@@ -7,6 +7,10 @@
   <version>1.0-SNAPSHOT</version>
   <name>http2client</name>
 
+  <properties>
+    <alpn-api-version>1.1.2.v20150522</alpn-api-version>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
@@ -23,6 +27,12 @@
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-jdk16</artifactId>
       <version>1.46</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty.alpn</groupId>
+      <artifactId>alpn-api</artifactId>
+      <version>${alpn-api-version}</version>
+      <scope>provided</scope>
     </dependency>
   </dependencies>
 

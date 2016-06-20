@@ -9,10 +9,17 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.net.SocketFactory;
+
+import org.laborercode.http2.client.alpn.AlpnSocketFactory;
+
 import com.twitter.hpack.Encoder;
 
 public class Http2Client {
     private InetSocketAddress address;
+    private Protocol protocol;
+    private SocketFactory socketFactory;
+
     private AtomicInteger lastStreamId;
     private FrameReader reader;
     private FrameWriter writer;
@@ -37,18 +44,28 @@ public class Http2Client {
         this.encoder = new Encoder(settings.getSetting(Settings.SETTINGS_HEADER_TABLE_SIZE));
     }
 
-    public void direct(boolean direct) {
-        this.direct = direct;
+    public void connect(InetSocketAddress address) throws IOException {
+        connect(address, Protocol.H2C);
     }
 
-    public void connect(InetSocketAddress address) throws IOException {
-        this.address = address;
-        connect(address.getHostName(), address.getPort());
+    public void connect(InetSocketAddress address, Protocol protocol) throws IOException {
+        connect(address.getHostName(), address.getPort(), protocol);
     }
 
     public void connect(String host, int port) throws IOException {
+        connect(host, port, Protocol.H2C);
+    }
+
+    public void connect(String host, int port, Protocol protocol) throws IOException {
         this.address = new InetSocketAddress(host, port);
-        socket = new Socket(address.getHostName(), address.getPort());
+        this.protocol = protocol;
+
+        if(protocol == Protocol.H2C) {
+            socketFactory = SocketFactory.getDefault();
+        } else {
+            socketFactory = AlpnSocketFactory.getDefault();
+        }
+        socket = socketFactory.createSocket(address.getHostName(), address.getPort());
 
         upgrade(true);
         out = socket.getOutputStream();
@@ -64,7 +81,9 @@ public class Http2Client {
 
     public Http2Request connect(String host, int port, UpgradeRequest request) throws IOException {
         this.address = new InetSocketAddress(host, port);
-        socket = new Socket(address.getHostName(), address.getPort());
+        this.protocol = Protocol.H2C;
+
+        socket = socketFactory.createSocket(address.getHostName(), address.getPort());
 
         String requestString = request.getRequestString(host, port, settings);
         OutputStream out = socket.getOutputStream();
@@ -172,5 +191,9 @@ public class Http2Client {
 
     ConnectionListener testListener() {
         return listener;
+    }
+
+    public enum Protocol {
+        H2, H2C
     }
 }

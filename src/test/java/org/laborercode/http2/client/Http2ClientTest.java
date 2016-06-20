@@ -2,7 +2,6 @@ package org.laborercode.http2.client;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -13,7 +12,6 @@ import org.junit.Test;
 import org.laborercode.http2.client.Frame;
 import org.laborercode.http2.client.FrameListener;
 import org.laborercode.http2.client.Http2Client;
-import org.laborercode.http2.client.Http2Constants;
 import org.laborercode.http2.client.Http2Request;
 import org.laborercode.http2.client.Http2Response;
 import org.laborercode.http2.client.HttpHeaders;
@@ -48,6 +46,14 @@ public class Http2ClientTest {
         Assert.assertEquals(200, response.status());
 
         client.disconnect();
+    }
+
+    @Test
+    public void testStartWithUpgrade() throws IOException {
+        Http2Client client = new Http2Client();
+        UpgradeRequest.Builder builder = new UpgradeRequest.Builder();
+
+        client.connect(testHost, testPort, request);
     }
 
     @Test
@@ -104,7 +110,7 @@ public class Http2ClientTest {
     }
 
     @Test
-    public void testPingPong() throws IOException, InterruptedException {
+    public void testSendPing() throws IOException, InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
 
         Http2Client client = new Http2Client();
@@ -113,7 +119,7 @@ public class Http2ClientTest {
             public void onPing(Stream stream, Frame frame) {
                 byte[] payload = frame.payload();
 
-                if(frame.isAck() && payload[7] == 5) {
+                if(frame.isAck()) {
                     latch.countDown();
                 }
             }
@@ -123,125 +129,6 @@ public class Http2ClientTest {
         Http2Request request = client.request();
         Stream stream = request.stream();
         stream.ping(new byte[] { 0, 0, 0, 0, 0, 0, 0, 5 });
-
-        try {
-            boolean pass = latch.await(3000, TimeUnit.MILLISECONDS);
-            Assert.assertTrue(pass);
-        } finally {
-            client.disconnect();
-        }
-    }
-
-    @Test
-    public void testHeadersTwice() throws IOException, InterruptedException {
-        final CountDownLatch latch = new CountDownLatch(1);
-
-        Http2Client client = new Http2Client();
-        client.testListener(new ConnectionListener() {
-            @Override
-            public void onGoaway(Stream stream, Frame frame) {
-                byte[] payload = frame.payload();
-                ByteBuffer buf = ByteBuffer.wrap(payload);
-                int lastStreamId = buf.getInt();
-                int errorCode = buf.getInt();
-
-                if(errorCode == Http2Constants.STREAM_CLOSED) {
-                    latch.countDown();
-                }
-            }
-        });
-        client.connect(new InetSocketAddress(testHost, testPort));
-
-        Http2Request request = client.request();
-        Stream stream = request.stream();
-        stream.listener(new FrameListener() {
-            @Override
-            public void onReset(Stream stream, Frame frame) {
-                byte[] payload = frame.payload();
-                ByteBuffer buf = ByteBuffer.wrap(payload);
-                int errorCode = buf.getInt();
-
-                if(errorCode == Http2Constants.STREAM_CLOSED) {
-                    latch.countDown();
-                }
-            }
-        });
-        stream.headers(RequestMethod.GET, testRequestURI, new HttpHeaders().add("host", testHost + ":" + testPort),
-                Http2Constants.FLAG_END_HEADERS | Http2Constants.FLAG_END_STREAM);
-
-        stream.headers(RequestMethod.GET, testRequestURI, new HttpHeaders().add("host", testHost + ":" + testPort),
-                Http2Constants.FLAG_END_HEADERS | Http2Constants.FLAG_END_STREAM);
-
-        try {
-            boolean pass = latch.await(3000, TimeUnit.MILLISECONDS);
-            Assert.assertTrue(pass);
-        } finally {
-            client.disconnect();
-        }
-    }
-
-    @Test
-    public void testSendHeadersBeforeEndHeaders() throws IOException, InterruptedException {
-        final CountDownLatch latch = new CountDownLatch(1);
-
-        Http2Client client = new Http2Client();
-        client.testListener(new ConnectionListener() {
-            @Override
-            public void onGoaway(Stream stream, Frame frame) {
-                byte[] payload = frame.payload();
-                ByteBuffer buf = ByteBuffer.wrap(payload);
-                int lastStreamId = buf.getInt();
-                int errorCode = buf.getInt();
-
-                if(errorCode == Http2Constants.PROTOCOL_ERROR) {
-                    latch.countDown();
-                }
-            }
-        });
-        client.connect(new InetSocketAddress(testHost, testPort));
-
-        // stream 1
-        Http2Request request = client.request();
-        Stream stream = request.stream();
-        stream.headers(RequestMethod.GET, testRequestURI, new HttpHeaders().add("host", testHost + ":" + testPort), 0);
-
-        // stream 3
-        request = client.request();
-        stream = request.stream();
-        stream.headers(RequestMethod.GET, testRequestURI, new HttpHeaders().add("host", testHost + ":" + testPort), 0);
-
-        try {
-            boolean pass = latch.await(3000, TimeUnit.MILLISECONDS);
-            Assert.assertTrue(pass);
-        } finally {
-            client.disconnect();
-        }
-    }
-
-    @Test
-    public void testSendOtherFrameBeforeEndHeaders() throws IOException, InterruptedException {
-        final CountDownLatch latch = new CountDownLatch(1);
-
-        Http2Client client = new Http2Client();
-        client.testListener(new ConnectionListener() {
-            @Override
-            public void onGoaway(Stream stream, Frame frame) {
-                byte[] payload = frame.payload();
-                ByteBuffer buf = ByteBuffer.wrap(payload);
-                int lastStreamId = buf.getInt();
-                int errorCode = buf.getInt();
-
-                if(errorCode == Http2Constants.PROTOCOL_ERROR) {
-                    latch.countDown();
-                }
-            }
-        });
-        client.connect(new InetSocketAddress(testHost, testPort));
-
-        Http2Request request = client.request();
-        Stream stream = request.stream();
-        stream.headers(RequestMethod.GET, testRequestURI, new HttpHeaders().add("host", testHost + ":" + testPort), 0);
-        stream.data(new byte[] { '0', '0'}, 0);
 
         try {
             boolean pass = latch.await(3000, TimeUnit.MILLISECONDS);
