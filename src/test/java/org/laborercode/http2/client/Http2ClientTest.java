@@ -22,15 +22,15 @@ import org.laborercode.http2.client.Http2Request.RequestMethod;
 public class Http2ClientTest {
     private static String testHost;
     private static int testPort;
-    private static String testRequestURI;
+    private static String testRequestPath;
 
     int requestSize = 0;
 
     @BeforeClass
     public static void setup() {
         testHost = System.getProperty("test.host");
-        testPort = Integer.parseInt(System.getProperty("test.port"));
-        testRequestURI = System.getProperty("test.request_uri");
+        testPort = Integer.parseInt(System.getProperty("test.http.port"));
+        testRequestPath = System.getProperty("test.request.path");
     }
 
     @Test
@@ -39,7 +39,7 @@ public class Http2ClientTest {
         client.connect(new InetSocketAddress(testHost, testPort));
 
         Http2Request request = client.request();
-        Http2Response response = request.path(testRequestURI)
+        Http2Response response = request.path(testRequestPath)
                 .method(RequestMethod.GET)
                 .send();
 
@@ -53,7 +53,7 @@ public class Http2ClientTest {
         Http2Client client = new Http2Client();
         UpgradeRequest.Builder builder = new UpgradeRequest.Builder();
 
-        client.connect(testHost, testPort, request);
+        client.connect(testHost, testPort, builder.build());
     }
 
     @Test
@@ -65,7 +65,7 @@ public class Http2ClientTest {
         int windowSize = settings.getSetting(Settings.SETTINGS_INITIAL_WINDOW_SIZE);
 
         Http2Request request = client.request();
-        Http2Response response = request.path(testRequestURI)
+        Http2Response response = request.path(testRequestPath)
                 .method(RequestMethod.GET)
                 .send(new FrameListener() {
                     @Override
@@ -78,7 +78,7 @@ public class Http2ClientTest {
         int testCount = (windowSize / requestSize + 1) * 2;
         for(int i = 0 ; i < testCount ; i++) {
             request = client.request();
-            response = request.path(testRequestURI)
+            response = request.path(testRequestPath)
                     .method(RequestMethod.GET)
                     .send();
 
@@ -96,7 +96,7 @@ public class Http2ClientTest {
         Http2Request request = client.request();
         Stream stream = request.stream();
         stream.window(Integer.MAX_VALUE >> 1, true);
-        Http2Response response = request.path(testRequestURI)
+        Http2Response response = request.path(testRequestPath)
                 .method(RequestMethod.POST)
                 .headers(new HttpHeaders().add("content-length", String.valueOf(data.length)))
                 .body(data)
