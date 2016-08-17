@@ -175,7 +175,7 @@ public class AbstractStream implements Stream {
     public void settings(Settings settings) {
         byte[] payload = settings.payload();
 
-        Frame.Settings frame = new Frame.Settings(streamId(), 0, payload.length);
+        Frame.Settings frame = new Frame.Settings(0, 0, payload.length);
         frame.payload(payload);
         writer.write(frame);
     }

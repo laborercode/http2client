@@ -31,10 +31,6 @@ public class Settings {
         }
     }
 
-    public Settings(boolean ackOnly) {
-        
-    }
-
     public void update(Settings settings) {
         byte[] payload = settings.payload();
 
@@ -86,11 +82,6 @@ public class Settings {
 
     public Settings frameSize(int size) {
         parameterMap.put(SETTINGS_MAX_FRAME_SIZE, size);
-        return this;
-    }
-
-    public Settings isAck(boolean ack) {
-        // isAck = ack;
         return this;
     }
 

@@ -219,14 +219,8 @@ public interface Frame {
 
         @Override
         public void process(AbstractStream stream) {
-            if(isAck()) {
-                // do nothing yet...
-            } else {
-                byte[] payload = payload();
-
-                // send pong with 8 byte payload received from server
-                stream.ping(payload, true);
-            }
+            // settings frame always belongs to connection stream(streamId = 0)
+            // just call listener
             Listener listener = stream.listener();
             if(listener != null) {
                 listener.onSettings(stream, this);
