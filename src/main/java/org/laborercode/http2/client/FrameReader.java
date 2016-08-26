@@ -4,9 +4,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.twitter.hpack.Decoder;
@@ -170,11 +167,13 @@ class FrameReader {
                     Settings newSettings = new Settings(frame.payload());
                     int newStreams = newSettings.getSetting(Settings.SETTINGS_MAX_CONCURRENT_STREAMS);
                     if(newStreams > maxConcurrentStreams) {
+                        maxConcurrentStreams = newStreams;
                         synchronized(streamCounter) {
                             streamCounter.notifyAll();
                         }
+                    } else {
+                        maxConcurrentStreams = newStreams;
                     }
-                    maxConcurrentStreams = newStreams;
                     // set decoder
 
                     int oldValue = decoder.getMaxHeaderTableSize();

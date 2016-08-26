@@ -82,7 +82,7 @@ public interface Frame {
 
             // set response string before call listener
             if(isEndStream()) {
-                stream.responseString(bufferer.string());
+                //stream.responseString(bufferer.string());
                 bufferer.close();
             }
 
@@ -229,6 +229,13 @@ public interface Frame {
     }
 
     class Push extends AbstractFrame {
+        private HttpHeaders headers;
+        private String method;
+        private String path;
+        private String scheme;
+        private String authority;
+
+        private int pushStreamId;
 
         public Push(int streamId, int flags, int length) {
             super(streamId, flags, length);
@@ -246,11 +253,73 @@ public interface Frame {
         }
 
         @Override
-        public void process(AbstractStream stream) {
+        public void process(AbstractStream stream) throws IOException {
+            Decoder decoder = stream.decoder();
+
+            byte[] payload = payload();
+            int offset = 0;
+            int length = payload.length;
+
+            if(isPadded()) {
+                byte padLength = payload[0];
+                offset += 1;
+                length = length - 1 - (int)padLength & 0xff;
+            }
+
+            ByteBuffer buf = ByteBuffer.wrap(payload, offset, length);
+            pushStreamId = buf.getInt();
+            offset += 4;
+            length -= 4;
+
+            stream.add(this);
+            ByteArrayInputStream bais = new ByteArrayInputStream(payload, offset, length);
+            decoder.decode(bais, new PushHeaderListener(this));
+            decoder.endHeaderBlock();
+
             Listener listener = stream.listener();
             if(listener != null) {
                 listener.onPush(stream, this);
             }
+        }
+
+        public int pushStreamId() {
+            return pushStreamId;
+        }
+
+        public HttpHeaders headers() {
+            return headers;
+        }
+
+        void method(String method) {
+            this.method = method;
+        }
+
+        public String method() {
+            return method;
+        }
+
+        void path(String path) {
+            this.path = path;
+        }
+
+        public String path() {
+            return path;
+        }
+
+        void authority(String authority) {
+            this.authority = authority;
+        }
+
+        public String authority() {
+            return authority;
+        }
+
+        void scheme(String scheme) {
+            this.scheme = scheme;
+        }
+
+        public String scheme() {
+            return scheme;
         }
     }
 

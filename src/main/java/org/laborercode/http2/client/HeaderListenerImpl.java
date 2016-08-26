@@ -16,10 +16,10 @@ class HeaderListenerImpl implements HeaderListener {
         String headerName = new String(name);
         String headerValue = new String(value);
 
-        headers.add(headerName, headerValue);
-
         if(headerName.equals(":status")) {
             stream.status(Integer.parseInt(headerValue));
+        } else {
+            headers.add(headerName, headerValue);
         }
     }
 }

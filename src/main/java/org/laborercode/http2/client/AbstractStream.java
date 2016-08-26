@@ -3,6 +3,7 @@ package org.laborercode.http2.client;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -23,6 +24,8 @@ public class AbstractStream implements Stream {
     private int status;
     private String responseString;
     private DataBufferer dataBufferer;
+
+    private HashMap<Integer, Frame.Push> pushFrameMap;
 
     AbstractStream(Http2Request request, Http2Client client) {
         this.client = client;
@@ -218,5 +221,13 @@ public class AbstractStream implements Stream {
     public void goaway(int lastStreamId, int errorCode) {
         // TODO Auto-generated method stub
         
+    }
+
+    public void add(Frame.Push frame) {
+        pushFrameMap.put(frame.pushStreamId(), frame);
+    }
+
+    public Frame.Push pushFrame(int pushStreamId) {
+        return pushFrameMap.get(pushStreamId);
     }
 }

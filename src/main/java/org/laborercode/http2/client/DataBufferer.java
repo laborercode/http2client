@@ -4,7 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 class DataBufferer {
-    private ByteArrayOutputStream baos = new ByteArrayOutputStream(1024);
+    private ByteArrayOutputStream baos = new ByteArrayOutputStream(8192);
 
     public DataBufferer() {
     }
