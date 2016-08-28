@@ -153,9 +153,7 @@ public class AbstractStream implements Stream {
         int frameCount = data.length / frameSize;
         byte[] payload = null;
         for(int i = 0 ; i < frameCount ; i++) {
-            if(payload == null) {
-                payload = new byte[frameSize];
-            }
+            payload = new byte[frameSize];
             System.arraycopy(data, i * frameSize, payload, 0, frameSize);
             Frame.Data frame = new Frame.Data(streamId(),
                     flags ^ Http2Constants.FLAG_END_STREAM, payload.length);
